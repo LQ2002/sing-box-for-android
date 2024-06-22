@@ -34,6 +34,10 @@ android {
             storePassword getProps("KEYSTORE_PASS")
             keyAlias getProps("ALIAS_NAME")
             keyPassword getProps("ALIAS_PASS")
+            enableV1Signing true
+            enableV2Signing true
+            enableV3Signing true
+            enableV4Signing true
         }
     }
 

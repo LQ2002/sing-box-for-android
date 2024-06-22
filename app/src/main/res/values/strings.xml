@@ -1,4 +1,5 @@
 <resources>
+    <string name="dashboard_mode">Mode</string>
     <string name="app_name">sing-box</string>
 
     <string name="stop">Stop</string>
@@ -62,6 +63,8 @@
 
     <string name="enabled">Enabled</string>
     <string name="disabled">Disabled</string>
+    <string name="select">Select</string>
+    <string name="deselect">Deselect</string>
 
     <string name="settings_clear_working_directory">Clear Working Directory</string>
 
@@ -75,6 +78,7 @@
     <string name="service_error_title_start_command_server">Start command server</string>
     <string name="service_error_title_create_service">Create service</string>
     <string name="service_error_title_start_service">Start service</string>
+    <string name="status_started_ui">Service started</string>
 
     <string name="status_status">Status</string>
     <string name="status_memory">Memory</string>

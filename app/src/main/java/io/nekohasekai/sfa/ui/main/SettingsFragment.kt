@@ -1,5 +1,6 @@
 package io.nekohasekai.sfa.ui.main
 
+import android.content.Context
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Intent
@@ -56,7 +57,6 @@ class SettingsFragment : Fragment() {
     @SuppressLint("BatteryLife")
     private fun onCreate() {
         val activity = activity as MainActivity? ?: return
-        val binding = binding ?: return
         binding.versionText.text = Libbox.version()
         binding.clearButton.setOnClickListener {
             lifecycleScope.launch(Dispatchers.IO) {
@@ -70,7 +70,7 @@ class SettingsFragment : Fragment() {
         }
         binding.checkUpdateEnabled.addTextChangedListener {
             lifecycleScope.launch(Dispatchers.IO) {
-                val newValue = EnabledType.valueOf(it).boolValue
+                val newValue = EnabledType.fromLocalizedString(requireContext(), it).boolValue
                 Settings.checkUpdateEnabled = newValue
             }
         }
@@ -82,13 +82,13 @@ class SettingsFragment : Fragment() {
         }
         binding.disableMemoryLimit.addTextChangedListener {
             lifecycleScope.launch(Dispatchers.IO) {
-                val newValue = EnabledType.valueOf(it).boolValue
+                val newValue = EnabledType.fromLocalizedString(requireContext(), it).boolValue
                 Settings.disableMemoryLimit = !newValue
             }
         }
         binding.dynamicNotificationEnabled.addTextChangedListener {
             lifecycleScope.launch(Dispatchers.IO) {
-                val newValue = EnabledType.valueOf(it).boolValue
+                val newValue = EnabledType.fromLocalizedString(requireContext(), it).boolValue
                 Settings.dynamicNotification = newValue
             }
         }
@@ -123,7 +123,6 @@ class SettingsFragment : Fragment() {
 
     private suspend fun reloadSettings() {
         val activity = activity ?: return
-        val binding = binding ?: return
         val dataSize = Libbox.formatBytes(
             (activity.getExternalFilesDir(null) ?: activity.filesDir)
                 .walkTopDown().filter { it.isFile }.map { it.length() }.sum()
@@ -137,14 +136,13 @@ class SettingsFragment : Fragment() {
         val dynamicNotification = Settings.dynamicNotification
         withContext(Dispatchers.Main) {
             binding.dataSizeText.text = dataSize
-            binding.checkUpdateEnabled.text = EnabledType.from(checkUpdateEnabled).name
+            binding.checkUpdateEnabled.text = EnabledType.from(checkUpdateEnabled).getLocalizedString(requireContext())
             binding.checkUpdateEnabled.setSimpleItems(R.array.enabled)
-            binding.disableMemoryLimit.text = EnabledType.from(!Settings.disableMemoryLimit).name
+            binding.disableMemoryLimit.text = EnabledType.from(!Settings.disableMemoryLimit).getLocalizedString(requireContext())
             binding.disableMemoryLimit.setSimpleItems(R.array.enabled)
             binding.backgroundPermissionCard.isGone = removeBackgroundPermissionPage
-            binding.dynamicNotificationEnabled.text = EnabledType.from(dynamicNotification).name
+            binding.dynamicNotificationEnabled.text = EnabledType.from(dynamicNotification).getLocalizedString(requireContext())
             binding.dynamicNotificationEnabled.setSimpleItems(R.array.enabled)
         }
     }
-
 }

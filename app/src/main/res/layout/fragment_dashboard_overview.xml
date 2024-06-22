@@ -436,7 +436,7 @@
                         android:layout_height="wrap_content"
                         android:paddingHorizontal="16dp"
                         android:paddingTop="16dp"
-                        android:text="Mode"
+                        android:text="@string/dashboard_mode"
                         android:textAppearance="?attr/textAppearanceTitleSmall">
 
                     </TextView>

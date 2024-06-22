@@ -54,7 +54,7 @@ class LogFragment : Fragment() {
                 Status.Started -> {
                     binding.fab.setImageResource(R.drawable.ic_stop_24)
                     binding.fab.show()
-                    binding.statusText.setText(R.string.status_started)
+                    binding.statusText.setText(R.string.status_started_ui)
                 }
 
                 Status.Stopping -> {

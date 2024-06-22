@@ -14,9 +14,9 @@ import io.nekohasekai.sfa.ui.shared.AbstractActivity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import android.util.Log
 
-class ProfileOverrideActivity :
-    AbstractActivity<ActivityConfigOverrideBinding>() {
+class ProfileOverrideActivity : AbstractActivity<ActivityConfigOverrideBinding>() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -32,9 +32,14 @@ class ProfileOverrideActivity :
         binding.configureAppListButton.isEnabled = binding.switchPerAppProxy.isChecked
 
         binding.perAppProxyUpdateOnChange.addTextChangedListener {
-            lifecycleScope.launch(Dispatchers.IO) {
-                Settings.perAppProxyUpdateOnChange = PerAppProxyUpdateType.valueOf(it).value()
-            }
+    lifecycleScope.launch(Dispatchers.IO) {
+        try {
+            val type = PerAppProxyUpdateType.fromDisplayName(this@ProfileOverrideActivity, it)
+            Settings.perAppProxyUpdateOnChange = type.value()
+        } catch (e: IllegalArgumentException) {
+            Log.e("ProfileOverrideActivity", "Error parsing display name: $it", e)
+        }
+    }
         }
 
         binding.configureAppListButton.setOnClickListener {
@@ -48,8 +53,8 @@ class ProfileOverrideActivity :
     private suspend fun reloadSettings() {
         val perAppUpdateOnChange = Settings.perAppProxyUpdateOnChange
         withContext(Dispatchers.Main) {
-            binding.perAppProxyUpdateOnChange.text =
-                PerAppProxyUpdateType.valueOf(perAppUpdateOnChange).name
+            val type = PerAppProxyUpdateType.valueOf(perAppUpdateOnChange)
+            binding.perAppProxyUpdateOnChange.text = type.getLocalizedDisplayName(this@ProfileOverrideActivity)
             binding.perAppProxyUpdateOnChange.setSimpleItems(R.array.per_app_proxy_update_on_change_value)
         }
     }

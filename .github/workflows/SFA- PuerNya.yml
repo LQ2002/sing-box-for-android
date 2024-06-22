@@ -1,0 +1,232 @@
+name: Build SFA
+
+on:
+  schedule:
+    - cron: '0 20,6 * * *'  # 每天在 20:00 和 06:00 运行
+  workflow_dispatch:  # 保留手动触发选项
+    inputs:
+      check_updates:
+        description: '检查更新'
+        required: true
+        default: 'false'
+        type: boolean
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sing-box repository
+        uses: actions/checkout@v4.1.1
+        with:
+          path: sing-box
+          repository: PuerNya/sing-box
+          ref: building
+          fetch-depth: 0
+          
+      - name: Get latest go version
+        id: go
+        run: |
+          echo version=$(curl -s https://raw.githubusercontent.com/actions/go-versions/update-versions-manifest-file/versions-manifest.json | grep -oE '"version": "[0-9]{1}.[0-9]{1,}(.[0-9]{1,})?"' | head -1 | cut -d':' -f2 | sed 's/ //g; s/"//g') >> $GITHUB_OUTPUT
+
+      - name: Setup go
+        uses: actions/setup-go@v5.0.0
+        with:
+          go-version: ${{steps.go.outputs.version}}
+
+      - name: Check for updates
+        id: check_updates
+        if: github.event.inputs.check_updates != 'false'
+        run: |
+          cd sing-box
+          git fetch
+          if [ $(git rev-parse HEAD) != $(git rev-parse origin/building) ]; then
+            echo "updates_found=true" >> $GITHUB_OUTPUT
+          else
+            echo "updates_found=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set updates_found to true for manual run without update check
+        if: github.event.inputs.check_updates == 'false'
+        run: echo "updates_found=true" >> $GITHUB_OUTPUT
+
+      - name: Get latest commit message
+        id: get_commit_message
+        if: steps.check_updates.outputs.updates_found == 'true' || github.event.inputs.check_updates == 'false'
+        run: |
+          cd sing-box
+          echo "commit_message=$(git log -1 --pretty=%B)" >> $GITHUB_OUTPUT
+
+      - name: Get sing-box commit ID
+        id: get-commit-id
+        if: steps.check_updates.outputs.updates_found == 'true' || github.event.inputs.check_updates == 'false'
+        run: |
+          cd sing-box
+          echo "commit_id=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Setup java
+        if: steps.check_updates.outputs.updates_found == 'true' || github.event.inputs.check_updates == 'false'
+        uses: actions/setup-java@v4.0.0
+        with:
+          distribution: 'oracle'
+          java-version: 21
+
+      - name: Setup ndk
+        if: steps.check_updates.outputs.updates_found == 'true' || github.event.inputs.check_updates == 'false'
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r26b
+
+      - name: Get latest build tools version
+        if: steps.check_updates.outputs.updates_found == 'true' || github.event.inputs.check_updates == 'false'
+        id: sdk
+        run: echo version=$(ls $ANDROID_HOME/build-tools | tail -n 1) >> $GITHUB_OUTPUT
+
+      - name: Get sing-box version
+        if: steps.check_updates.outputs.updates_found == 'true' || github.event.inputs.check_updates == 'false'
+        id: sing-box
+        run: |
+          cd sing-box
+          git remote add sekai https://github.com/SagerNet/sing-box
+          git fetch --tags sekai
+          version=$(CGO_ENABLED=0 go run ./cmd/internal/read_tag)
+          echo version=$version >> $GITHUB_OUTPUT
+
+      - name: Build libbox
+        if: steps.check_updates.outputs.updates_found == 'true' || github.event.inputs.check_updates == 'false'
+        env:
+          CC: ${{steps.setup-ndk.outputs.ndk-path}}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android34-clang
+          TAGS: with_quic,with_dhcp,with_wireguard,with_shadowsocksr,with_ech,with_utls,with_clash_api,with_gvisor
+          VERSION: ${{steps.sing-box.outputs.version}}
+          CGO_ENABLED: '0'
+        run: |
+          cd sing-box
+          go mod tidy
+          make lib_install
+          gomobile bind -v -a -trimpath -androidapi 21 -javapkg=io.nekohasekai -libname=box -tags ${TAGS} -ldflags "-X github.com/sagernet/sing-box/constant.Version=${VERSION} -s -w -buildid=" ./experimental/libbox
+
+      - name: Checkout app repository
+        if: steps.check_updates.outputs.updates_found == 'true' || github.event.inputs.check_updates == 'false'
+        uses: actions/checkout@v4.1.1
+        with:
+          path: sfa
+          repository: LQ2002/sing-box-for-android
+          submodules: recursive
+
+      - name: Setup Android SDK
+        if: steps.check_updates.outputs.updates_found == 'true' || github.event.inputs.check_updates == 'false'
+        uses: android-actions/setup-android@v3
+
+      - name: Install Build Tools
+        if: steps.check_updates.outputs.updates_found == 'true' || github.event.inputs.check_updates == 'false'
+        run: |
+          sdkmanager --install "build-tools;30.0.3"
+          echo "$ANDROID_HOME/build-tools/30.0.3" >> $GITHUB_PATH
+
+      - name: Debug Keystore
+        run: |
+          ls -l sfa/app/
+          file sfa/app/release.keystore
+          echo "KEYSTORE_PASSWORD length: ${#KEYSTORE_PASSWORD}"
+          echo "KEY_ALIAS length: ${#KEY_ALIAS}"
+          echo "KEY_PASSWORD length: ${#KEY_PASSWORD}"
+
+      - name: Setup build env && build app
+        if: steps.check_updates.outputs.updates_found == 'true' || github.event.inputs.check_updates == 'false'
+        env:
+          VERSION: ${{steps.sing-box.outputs.version}}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          mkdir -p sfa/app/libs/
+          cp ./sing-box/libbox.aar sfa/app/libs/
+          cd sfa
+          echo "" >> gradle.properties
+          echo "org.gradle.jvmargs=-Xmx4096m -Dfile.encoding=UTF-8 -XX:+UseParallelGC" >> gradle.properties
+          echo "org.gradle.caching=true" >> gradle.properties
+          echo "org.gradle.parallel=true" >> gradle.properties
+          echo "VERSION_NAME=${VERSION}" > local.properties
+          echo "VERSION_CODE=$(date +%Y%m%d%H)" >> local.properties
+          chmod +x ./gradlew
+          ./gradlew assembleRelease \
+            -Pandroid.injected.signing.store.file=$PWD/app/release.keystore \
+            -Pandroid.injected.signing.store.password=$KEYSTORE_PASSWORD \
+            -Pandroid.injected.signing.key.alias=$KEY_ALIAS \
+            -Pandroid.injected.signing.key.password=$KEY_PASSWORD \
+            -Pandroid.injected.signing.v1-signing-enabled=true \
+            -Pandroid.injected.signing.v2-signing-enabled=true \
+            -Pandroid.injected.signing.v3-signing-enabled=true \
+            -Pandroid.injected.signing.v4-signing-enabled=true
+
+      - name: List build output directory
+        if: steps.check_updates.outputs.updates_found == 'true' || github.event.inputs.check_updates == 'false'
+        run: |
+          echo "Listing APK files in build output directory:"
+          find sfa/app/build/outputs -name "*.apk"
+
+      - name: Verify APK signatures
+        if: steps.check_updates.outputs.updates_found == 'true' || github.event.inputs.check_updates == 'false'
+        run: |
+         for apk in sfa/app/build/outputs/apk/other/release/*.apk; do
+         apksigner verify --verbose "$apk"
+         done
+
+         for apk in sfa/app/build/outputs/apk/play/release/*.apk; do
+         apksigner verify --verbose "$apk"
+         done
+
+      - name: Upload arm64-v8a apk
+        if: steps.check_updates.outputs.updates_found == 'true' || github.event.inputs.check_updates == 'false'
+        uses: actions/upload-artifact@v4.1.0
+        env:
+          version: ${{steps.sing-box.outputs.version}}
+          commit_id: ${{steps.get-commit-id.outputs.commit_id}}
+        with:
+          name: SFA-PuerNya-${{env.version}}-${{env.commit_id}}-arm64-v8a
+          path: sfa/app/build/outputs/apk/**/*arm64-v8a*.apk
+          compression-level: 9
+
+      - name: Upload armeabi-v7a apk
+        if: steps.check_updates.outputs.updates_found == 'true' || github.event.inputs.check_updates == 'false'
+        uses: actions/upload-artifact@v4.1.0
+        env:
+          version: ${{steps.sing-box.outputs.version}}
+          commit_id: ${{steps.get-commit-id.outputs.commit_id}}
+        with:
+          name: SFA-PuerNya-${{env.version}}-${{env.commit_id}}-armeabi-v7a
+          path: sfa/app/build/outputs/apk/**/*armeabi-v7a*.apk
+          compression-level: 9
+
+      - name: Upload x86_64 apk
+        if: steps.check_updates.outputs.updates_found == 'true' || github.event.inputs.check_updates == 'false'
+        uses: actions/upload-artifact@v4.1.0
+        env:
+          version: ${{steps.sing-box.outputs.version}}
+          commit_id: ${{steps.get-commit-id.outputs.commit_id}}
+        with:
+          name: SFA-PuerNya-${{env.version}}-${{env.commit_id}}-x86_64
+          path: sfa/app/build/outputs/apk/**/*x86_64*.apk
+          compression-level: 9
+
+      - name: Upload x86 apk
+        if: steps.check_updates.outputs.found == 'true' || github.event.inputs.check_updates == 'false'
+        uses: actions/upload-artifact@v4.1.0
+        env:
+          version: ${{steps.sing-box.outputs.version}}
+          commit_id: ${{steps.get-commit-id.outputs.commit_id}}
+        with:
+          name: SFA-PuerNya-${{env.version}}-${{env.commit_id}}-x86
+          path: sfa/app/build/outputs/apk/**/*x86*.apk
+          compression-level: 9
+
+      - name: Upload universal apk
+        if: steps.check_updates.outputs.updates_found == 'true' || github.event.inputs.check_updates == 'false'
+        uses: actions/upload-artifact@v4.1.0
+        env:
+          version: ${{steps.sing-box.outputs.version}}
+          commit_id: ${{steps.get-commit-id.outputs.commit_id}}
+        with:
+          name: SFA-PuerNya-${{env.version}}-${{env.commit_id}}-universal
+          path: sfa/app/build/outputs/apk/**/*universal*.apk
+          compression-level: 9

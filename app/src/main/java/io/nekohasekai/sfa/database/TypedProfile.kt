@@ -1,26 +1,34 @@
 package io.nekohasekai.sfa.database
 
+import android.content.Context
 import android.os.Parcel
 import android.os.Parcelable
 import androidx.room.TypeConverter
+import io.nekohasekai.sfa.R
 import io.nekohasekai.sfa.ktx.marshall
 import io.nekohasekai.sfa.ktx.unmarshall
 import java.util.Date
 
 class TypedProfile() : Parcelable {
 
-    enum class Type {
-        Local, Remote;
+    enum class Type(val stringResId: Int) {
+        Local(R.string.profile_type_local),
+        Remote(R.string.profile_type_remote);
 
         companion object {
             fun valueOf(value: Int): Type {
-                for (it in values()) {
-                    if (it.ordinal == value) {
-                        return it
-                    }
-                }
-                return Local
+                return values().firstOrNull { it.ordinal == value } ?: Local
             }
+
+            fun fromString(context: Context, value: String): Type {
+                return values().firstOrNull { 
+                    context.getString(it.stringResId) == value 
+                } ?: Local
+            }
+        }
+
+        fun getName(context: Context): String {
+            return context.getString(stringResId)
         }
     }
 
@@ -68,14 +76,11 @@ class TypedProfile() : Parcelable {
     }
 
     class Convertor {
-
         @TypeConverter
         fun marshall(profile: TypedProfile) = profile.marshall()
 
         @TypeConverter
         fun unmarshall(content: ByteArray) =
             content.unmarshall(::TypedProfile)
-
     }
-
 }
