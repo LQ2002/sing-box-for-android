@@ -124,6 +124,7 @@ jobs:
           echo "$ANDROID_HOME/build-tools/30.0.3" >> $GITHUB_PATH
 
       - name: Debug Keystore
+        if: steps.check_updates.outputs.updates_found == 'true' || github.event.inputs.check_updates == 'false'
         run: |
           ls -l sfa/app/
           file sfa/app/release.keystore
