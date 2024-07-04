@@ -1,4 +1,4 @@
-name: Build SFA
+name: Build SFA PuerNya
 
 on:
   schedule:
