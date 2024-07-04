@@ -1,4 +1,4 @@
-name: Build SFA
+name: Build SFA SagerNet
 
 on:
   workflow_dispatch:  # 只保留手动触发选项
