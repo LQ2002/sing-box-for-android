@@ -55,15 +55,15 @@ jobs:
 
       - name: Build libbox
         env:
-          CC: ${{steps.setup-ndk.outputs.ndk-path}}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android34-clang
-          TAGS: with_quic,with_dhcp,with_wireguard,with_shadowsocksr,with_ech,with_utls,with_clash_api,with_gvisor
-          VERSION: ${{steps.sing-box.outputs.version}}
-          CGO_ENABLED: '0'
+         CC: ${{steps.setup-ndk.outputs.ndk-path}}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android34-clang
+         TAGS: with_quic,with_dhcp,with_wireguard,with_ech,with_utls,with_clash_api,with_gvisor
+         VERSION: ${{steps.sing-box.outputs.version}}
+         CGO_ENABLED: '0'
         run: |
-          cd sing-box
-          go mod tidy
-          make lib_install
-          gomobile bind -v -a -trimpath -androidapi 21 -javapkg=io.nekohasekai -libname=box -tags ${TAGS} -ldflags "-X github.com/sagernet/sing-box/constant.Version=${VERSION} -s -w -buildid=" ./experimental/libbox
+         cd sing-box
+         go mod tidy
+         make lib_install
+         gomobile bind -v -a -trimpath -androidapi 21 -javapkg=io.nekohasekai -libname=box -tags ${TAGS} -ldflags "-X github.com/sagernet/sing-box/constant.Version=${VERSION} -s -w -buildid=" ./experimental/libbox
 
       - name: Checkout app repository
         uses: actions/checkout@v4.1.1
