@@ -81,7 +81,6 @@ jobs:
 
 
       - name: Setup java
-        if: steps.check_updates.outputs.updates_found == 'true' || github.event.inputs.check_updates == 'false'
         uses: actions/setup-java@v4.0.0
         with:
           distribution: 'oracle'
