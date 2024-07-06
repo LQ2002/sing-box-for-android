@@ -31,12 +31,6 @@ jobs:
           cd sing-box
           echo "commit_message=$(git log -1 --pretty=%B)" >> $GITHUB_OUTPUT
 
-      - name: Get sing-box commit ID
-        id: get-commit-id
-        run: |
-          cd sing-box
-          echo "commit_id=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-
       - name: Setup java
         uses: actions/setup-java@v4.0.0
         with:
@@ -143,9 +137,8 @@ jobs:
         uses: actions/upload-artifact@v4.1.0
         env:
           version: ${{steps.sing-box.outputs.version}}
-          commit_id: ${{steps.get-commit-id.outputs.commit_id}}
         with:
-          name: SFA-PuerNya-${{env.version}}-${{env.commit_id}}-arm64-v8a
+          name: SFA-PuerNya-${{env.version}}-arm64-v8a
           path: sfa/app/build/outputs/apk/**/*arm64-v8a*.apk
           compression-level: 9
 
@@ -153,9 +146,8 @@ jobs:
         uses: actions/upload-artifact@v4.1.0
         env:
           version: ${{steps.sing-box.outputs.version}}
-          commit_id: ${{steps.get-commit-id.outputs.commit_id}}
         with:
-          name: SFA-PuerNya-${{env.version}}-${{env.commit_id}}-armeabi-v7a
+          name: SFA-PuerNya-${{env.version}}-armeabi-v7a
           path: sfa/app/build/outputs/apk/**/*armeabi-v7a*.apk
           compression-level: 9
 
@@ -163,9 +155,8 @@ jobs:
         uses: actions/upload-artifact@v4.1.0
         env:
           version: ${{steps.sing-box.outputs.version}}
-          commit_id: ${{steps.get-commit-id.outputs.commit_id}}
         with:
-          name: SFA-PuerNya-${{env.version}}-${{env.commit_id}}-x86_64
+          name: SFA-PuerNya-${{env.version}}-x86_64
           path: sfa/app/build/outputs/apk/**/*x86_64*.apk
           compression-level: 9
 
@@ -173,9 +164,8 @@ jobs:
         uses: actions/upload-artifact@v4.1.0
         env:
           version: ${{steps.sing-box.outputs.version}}
-          commit_id: ${{steps.get-commit-id.outputs.commit_id}}
         with:
-          name: SFA-PuerNya-${{env.version}}-${{env.commit_id}}-x86
+          name: SFA-PuerNya-${{env.version}}-x86
           path: sfa/app/build/outputs/apk/**/*x86*.apk
           compression-level: 9
 
@@ -183,8 +173,7 @@ jobs:
         uses: actions/upload-artifact@v4.1.0
         env:
           version: ${{steps.sing-box.outputs.version}}
-          commit_id: ${{steps.get-commit-id.outputs.commit_id}}
         with:
-          name: SFA-PuerNya-${{env.version}}-${{env.commit_id}}-universal
+          name: SFA-PuerNya-${{env.version}}-universal
           path: sfa/app/build/outputs/apk/**/*universal*.apk
           compression-level: 9
