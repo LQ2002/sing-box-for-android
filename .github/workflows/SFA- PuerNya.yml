@@ -4,12 +4,6 @@ on:
   schedule:
     - cron: '0 20,6 * * *'  # 每天在 20:00 和 06:00 运行
   workflow_dispatch:  # 保留手动触发选项
-    inputs:
-      check_updates:
-        description: '检查更新'
-        required: true
-        default: 'false'
-        type: boolean
 
 jobs:
   build:
@@ -33,57 +27,35 @@ jobs:
         with:
           go-version: ${{steps.go.outputs.version}}
 
-      - name: Check for updates
-        id: check_updates
-        if: github.event.inputs.check_updates != 'false'
-        run: |
-          cd sing-box
-          git fetch
-          if [ $(git rev-parse HEAD) != $(git rev-parse origin/building) ]; then
-            echo "updates_found=true" >> $GITHUB_OUTPUT
-          else
-            echo "updates_found=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Set updates_found to true for manual run without update check
-        if: github.event.inputs.check_updates == 'false'
-        run: echo "updates_found=true" >> $GITHUB_OUTPUT
-
       - name: Get latest commit message
         id: get_commit_message
-        if: steps.check_updates.outputs.updates_found == 'true' || github.event.inputs.check_updates == 'false'
         run: |
           cd sing-box
           echo "commit_message=$(git log -1 --pretty=%B)" >> $GITHUB_OUTPUT
 
       - name: Get sing-box commit ID
         id: get-commit-id
-        if: steps.check_updates.outputs.updates_found == 'true' || github.event.inputs.check_updates == 'false'
         run: |
           cd sing-box
           echo "commit_id=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
       - name: Setup java
-        if: steps.check_updates.outputs.updates_found == 'true' || github.event.inputs.check_updates == 'false'
         uses: actions/setup-java@v4.0.0
         with:
           distribution: 'oracle'
           java-version: 21
 
       - name: Setup ndk
-        if: steps.check_updates.outputs.updates_found == 'true' || github.event.inputs.check_updates == 'false'
         uses: nttld/setup-ndk@v1
         id: setup-ndk
         with:
           ndk-version: r26b
 
       - name: Get latest build tools version
-        if: steps.check_updates.outputs.updates_found == 'true' || github.event.inputs.check_updates == 'false'
         id: sdk
         run: echo version=$(ls $ANDROID_HOME/build-tools | tail -n 1) >> $GITHUB_OUTPUT
 
       - name: Get sing-box version
-        if: steps.check_updates.outputs.updates_found == 'true' || github.event.inputs.check_updates == 'false'
         id: sing-box
         run: |
           cd sing-box
@@ -93,7 +65,6 @@ jobs:
           echo version=$version >> $GITHUB_OUTPUT
 
       - name: Build libbox
-        if: steps.check_updates.outputs.updates_found == 'true' || github.event.inputs.check_updates == 'false'
         env:
           CC: ${{steps.setup-ndk.outputs.ndk-path}}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android34-clang
           TAGS: with_quic,with_dhcp,with_wireguard,with_shadowsocksr,with_ech,with_utls,with_clash_api,with_gvisor
@@ -106,7 +77,6 @@ jobs:
           gomobile bind -v -a -trimpath -androidapi 21 -javapkg=io.nekohasekai -libname=box -tags ${TAGS} -ldflags "-X github.com/sagernet/sing-box/constant.Version=${VERSION} -s -w -buildid=" ./experimental/libbox
 
       - name: Checkout app repository
-        if: steps.check_updates.outputs.updates_found == 'true' || github.event.inputs.check_updates == 'false'
         uses: actions/checkout@v4.1.1
         with:
           path: sfa
@@ -114,17 +84,14 @@ jobs:
           submodules: recursive
 
       - name: Setup Android SDK
-        if: steps.check_updates.outputs.updates_found == 'true' || github.event.inputs.check_updates == 'false'
         uses: android-actions/setup-android@v3
 
       - name: Install Build Tools
-        if: steps.check_updates.outputs.updates_found == 'true' || github.event.inputs.check_updates == 'false'
         run: |
           sdkmanager --install "build-tools;30.0.3"
           echo "$ANDROID_HOME/build-tools/30.0.3" >> $GITHUB_PATH
 
       - name: Debug Keystore
-        if: steps.check_updates.outputs.updates_found == 'true' || github.event.inputs.check_updates == 'false'
         run: |
           ls -l sfa/app/
           file sfa/app/release.keystore
@@ -133,7 +100,6 @@ jobs:
           echo "KEY_PASSWORD length: ${#KEY_PASSWORD}"
 
       - name: Setup build env && build app
-        if: steps.check_updates.outputs.updates_found == 'true' || github.event.inputs.check_updates == 'false'
         env:
           VERSION: ${{steps.sing-box.outputs.version}}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -161,13 +127,11 @@ jobs:
             -Pandroid.injected.signing.v4-signing-enabled=true
 
       - name: List build output directory
-        if: steps.check_updates.outputs.updates_found == 'true' || github.event.inputs.check_updates == 'false'
         run: |
           echo "Listing APK files in build output directory:"
           find sfa/app/build/outputs -name "*.apk"
 
       - name: Verify APK signatures
-        if: steps.check_updates.outputs.updates_found == 'true' || github.event.inputs.check_updates == 'false'
         run: |
          for apk in sfa/app/build/outputs/apk/other/release/*.apk; do
          apksigner verify --verbose "$apk"
@@ -177,57 +141,63 @@ jobs:
          apksigner verify --verbose "$apk"
          done
 
-      - name: Upload arm64-v8a apk
-        if: steps.check_updates.outputs.updates_found == 'true' || github.event.inputs.check_updates == 'false'
-        uses: actions/upload-artifact@v4.1.0
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
         env:
-          version: ${{steps.sing-box.outputs.version}}
-          commit_id: ${{steps.get-commit-id.outputs.commit_id}}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          name: SFA-PuerNya-${{env.version}}-${{env.commit_id}}-arm64-v8a
-          path: sfa/app/build/outputs/apk/**/*arm64-v8a*.apk
-          compression-level: 9
+          tag_name: v${{ steps.sing-box.outputs.version }}-${{ steps.get-commit-id.outputs.commit_id }}
+          release_name: Release ${{ steps.sing-box.outputs.version }}-${{ steps.get-commit-id.outputs.commit_id }}
+          draft: false
+          prerelease: false
 
-      - name: Upload armeabi-v7a apk
-        if: steps.check_updates.outputs.updates_found == 'true' || github.event.inputs.check_updates == 'false'
-        uses: actions/upload-artifact@v4.1.0
+      - name: Upload arm64-v8a APK
+        uses: actions/upload-release-asset@v1
         env:
-          version: ${{steps.sing-box.outputs.version}}
-          commit_id: ${{steps.get-commit-id.outputs.commit_id}}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          name: SFA-PuerNya-${{env.version}}-${{env.commit_id}}-armeabi-v7a
-          path: sfa/app/build/outputs/apk/**/*armeabi-v7a*.apk
-          compression-level: 9
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./sfa/app/build/outputs/apk/other/release/*arm64-v8a*.apk
+          asset_name: SFA-PuerNya-${{ steps.sing-box.outputs.version }}-${{ steps.get-commit-id.outputs.commit_id }}-arm64-v8a.apk
+          asset_content_type: application/vnd.android.package-archive
 
-      - name: Upload x86_64 apk
-        if: steps.check_updates.outputs.updates_found == 'true' || github.event.inputs.check_updates == 'false'
-        uses: actions/upload-artifact@v4.1.0
+      - name: Upload armeabi-v7a APK
+        uses: actions/upload-release-asset@v1
         env:
-          version: ${{steps.sing-box.outputs.version}}
-          commit_id: ${{steps.get-commit-id.outputs.commit_id}}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          name: SFA-PuerNya-${{env.version}}-${{env.commit_id}}-x86_64
-          path: sfa/app/build/outputs/apk/**/*x86_64*.apk
-          compression-level: 9
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./sfa/app/build/outputs/apk/other/release/*armeabi-v7a*.apk
+          asset_name: SFA-PuerNya-${{ steps.sing-box.outputs.version }}-${{ steps.get-commit-id.outputs.commit_id }}-armeabi-v7a.apk
+          asset_content_type: application/vnd.android.package-archive
 
-      - name: Upload x86 apk
-        if: steps.check_updates.outputs.found == 'true' || github.event.inputs.check_updates == 'false'
-        uses: actions/upload-artifact@v4.1.0
+      - name: Upload x86_64 APK
+        uses: actions/upload-release-asset@v1
         env:
-          version: ${{steps.sing-box.outputs.version}}
-          commit_id: ${{steps.get-commit-id.outputs.commit_id}}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          name: SFA-PuerNya-${{env.version}}-${{env.commit_id}}-x86
-          path: sfa/app/build/outputs/apk/**/*x86*.apk
-          compression-level: 9
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./sfa/app/build/outputs/apk/other/release/*x86_64*.apk
+          asset_name: SFA-PuerNya-${{ steps.sing-box.outputs.version }}-${{ steps.get-commit-id.outputs.commit_id }}-x86_64.apk
+          asset_content_type: application/vnd.android.package-archive
 
-      - name: Upload universal apk
-        if: steps.check_updates.outputs.updates_found == 'true' || github.event.inputs.check_updates == 'false'
-        uses: actions/upload-artifact@v4.1.0
+      - name: Upload x86 APK
+        uses: actions/upload-release-asset@v1
         env:
-          version: ${{steps.sing-box.outputs.version}}
-          commit_id: ${{steps.get-commit-id.outputs.commit_id}}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          name: SFA-PuerNya-${{env.version}}-${{env.commit_id}}-universal
-          path: sfa/app/build/outputs/apk/**/*universal*.apk
-          compression-level: 9
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./sfa/app/build/outputs/apk/other/release/*x86*.apk
+          asset_name: SFA-PuerNya-${{ steps.sing-box.outputs.version }}-${{ steps.get-commit-id.outputs.commit_id }}-x86.apk
+          asset_content_type: application/vnd.android.package-archive
+
+      - name: Upload universal APK
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./sfa/app/build/outputs/apk/other/release/*universal*.apk
+          asset_name: SFA-PuerNya-${{ steps.sing-box.outputs.version }}-${{ steps.get-commit-id.outputs.commit_id }}-universal.apk
+          asset_content_type: application/vnd.android.package-archive
