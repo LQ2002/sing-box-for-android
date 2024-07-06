@@ -80,27 +80,12 @@ jobs:
 
 
 
-      - name: Setup Java
-
-        uses: actions/setup-java@v3
-
+      - name: Setup java
+        if: steps.check_updates.outputs.updates_found == 'true' || github.event.inputs.check_updates == 'false'
+        uses: actions/setup-java@v4.0.0
         with:
-
-         distribution: 'temurin'  # 使用 Eclipse Temurin (AdoptOpenJDK)
-
-         java-version: '21'  # 指定具体版本
-
-         cache: 'gradle'  # 缓存 Gradle 依赖
-
-
-
-      - name: Setup Gradle
-
-        uses: gradle/gradle-build-action@v2
-
-        with:
-
-         gradle-version: wrapper
+          distribution: 'oracle'
+          java-version: 21
 
 
 
