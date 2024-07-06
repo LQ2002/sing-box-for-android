@@ -1,72 +1,19 @@
 name: Build SFA PuerNya
 
 on:
-  workflow_dispatch:  # 只保留手动触发选项
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout sing-box repository
+      - name: Checkout repositories
         uses: actions/checkout@v4.1.1
         with:
           path: sing-box
           repository: PuerNya/sing-box
           ref: building
           fetch-depth: 0
-          
-      - name: Get latest go version
-        id: go
-        run: |
-          echo version=$(curl -s https://raw.githubusercontent.com/actions/go-versions/update-versions-manifest-file/versions-manifest.json | grep -oE '"version": "[0-9]{1}.[0-9]{1,}(.[0-9]{1,})?"' | head -1 | cut -d':' -f2 | sed 's/ //g; s/"//g') >> $GITHUB_OUTPUT
-
-      - name: Setup go
-        uses: actions/setup-go@v5.0.0
-        with:
-          go-version: ${{steps.go.outputs.version}}
-
-      - name: Get latest commit message
-        id: get_commit_message
-        run: |
-          cd sing-box
-          echo "commit_message=$(git log -1 --pretty=%B)" >> $GITHUB_OUTPUT
-
-      - name: Setup java
-        uses: actions/setup-java@v4.0.0
-        with:
-          distribution: 'oracle'
-          java-version: 21
-
-      - name: Setup ndk
-        uses: nttld/setup-ndk@v1
-        id: setup-ndk
-        with:
-          ndk-version: r26b
-
-      - name: Get latest build tools version
-        id: sdk
-        run: echo version=$(ls $ANDROID_HOME/build-tools | tail -n 1) >> $GITHUB_OUTPUT
-
-      - name: Get sing-box version
-        id: sing-box
-        run: |
-          cd sing-box
-          git remote add sekai https://github.com/SagerNet/sing-box
-          git fetch --tags sekai
-          version=$(CGO_ENABLED=0 go run ./cmd/internal/read_tag)
-          echo version=$version >> $GITHUB_OUTPUT
-
-      - name: Build libbox
-        env:
-          CC: ${{steps.setup-ndk.outputs.ndk-path}}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android34-clang
-          TAGS: with_quic,with_dhcp,with_wireguard,with_shadowsocksr,with_ech,with_utls,with_clash_api,with_gvisor
-          VERSION: ${{steps.sing-box.outputs.version}}
-          CGO_ENABLED: '0'
-        run: |
-          cd sing-box
-          go mod tidy
-          make lib_install
-          gomobile bind -v -a -trimpath -androidapi 21 -javapkg=io.nekohasekai -libname=box -tags ${TAGS} -ldflags "-X github.com/sagernet/sing-box/constant.Version=${VERSION} -s -w -buildid=" ./experimental/libbox
 
       - name: Checkout app repository
         uses: actions/checkout@v4.1.1
@@ -75,122 +22,70 @@ jobs:
           repository: LQ2002/sing-box-for-android
           submodules: recursive
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Setup Go
+        uses: actions/setup-go@v5.0.0
+        with:
+          go-version: stable
 
-      - name: Install Build Tools
+      - name: Setup Java and Android SDK
+        uses: actions/setup-java@v4.0.0
+        with:
+          distribution: 'oracle'
+          java-version: 21
+
+      - name: Setup NDK
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r26b
+
+      - name: Get sing-box version
+        id: sing-box
         run: |
-          sdkmanager --install "build-tools;30.0.3"
-          echo "$ANDROID_HOME/build-tools/30.0.3" >> $GITHUB_PATH
+          cd sing-box
+          git remote add sekai https://github.com/SagerNet/sing-box
+          git fetch --tags sekai
+          echo "version=$(CGO_ENABLED=0 go run ./cmd/internal/read_tag)" >> $GITHUB_OUTPUT
 
-      - name: Debug Keystore
+      - name: Build libbox
+        env:
+          CC: ${{steps.setup-ndk.outputs.ndk-path}}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android34-clang
+          TAGS: with_quic,with_dhcp,with_wireguard,with_shadowsocksr,with_ech,with_utls,with_clash_api,with_gvisor
+          VERSION: ${{steps.sing-box.outputs.version}}
         run: |
-          ls -l sfa/app/
-          file sfa/app/release.keystore
-          echo "KEYSTORE_PASSWORD length: ${#KEYSTORE_PASSWORD}"
-          echo "KEY_ALIAS length: ${#KEY_ALIAS}"
-          echo "KEY_PASSWORD length: ${#KEY_PASSWORD}"
+          cd sing-box
+          make lib_install
+          gomobile bind -v -a -trimpath -androidapi 21 -javapkg=io.nekohasekai -libname=box -tags ${TAGS} -ldflags "-X github.com/sagernet/sing-box/constant.Version=${VERSION} -s -w -buildid=" ./experimental/libbox
 
-      - name: Setup build env && build app
+      - name: Build app
         env:
           VERSION: ${{steps.sing-box.outputs.version}}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          mkdir -p sfa/app/libs/
           cp ./sing-box/libbox.aar sfa/app/libs/
           cd sfa
-          echo "" >> gradle.properties
-          echo "org.gradle.jvmargs=-Xmx4096m -Dfile.encoding=UTF-8 -XX:+UseParallelGC" >> gradle.properties
-          echo "org.gradle.caching=true" >> gradle.properties
-          echo "org.gradle.parallel=true" >> gradle.properties
           echo "VERSION_NAME=${VERSION}" > local.properties
           echo "VERSION_CODE=$(date +%Y%m%d%H)" >> local.properties
-          chmod +x ./gradlew
           ./gradlew assembleRelease \
             -Pandroid.injected.signing.store.file=$PWD/app/release.keystore \
             -Pandroid.injected.signing.store.password=$KEYSTORE_PASSWORD \
             -Pandroid.injected.signing.key.alias=$KEY_ALIAS \
-            -Pandroid.injected.signing.key.password=$KEY_PASSWORD \
-            -Pandroid.injected.signing.v1-signing-enabled=true \
-            -Pandroid.injected.signing.v2-signing-enabled=true \
-            -Pandroid.injected.signing.v3-signing-enabled=true \
-            -Pandroid.injected.signing.v4-signing-enabled=true
+            -Pandroid.injected.signing.key.password=$KEY_PASSWORD
 
-      - name: List build output directory
+      - name: Upload APKs
+        uses: actions/upload-artifact@v4.1.0
+        env:
+          version: ${{steps.sing-box.outputs.version}}
+        with:
+          name: SFA-PuerNya-${{env.version}}
+          path: sfa/app/build/outputs/apk/**/*.apk
+          compression-level: 9
+
+      - name: Create GitHub Release and upload APKs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{steps.sing-box.outputs.version}}
         run: |
-          echo "Listing APK files in build output directory:"
-          find sfa/app/build/outputs -name "*.apk"
-
-      - name: Verify APK signatures
-        run: |
-         for apk in sfa/app/build/outputs/apk/other/release/*.apk; do
-         apksigner verify --verbose "$apk"
-         done
-
-         for apk in sfa/app/build/outputs/apk/play/release/*.apk; do
-         apksigner verify --verbose "$apk"
-         done
-
-      - name: Upload arm64-v8a apk
-        uses: actions/upload-artifact@v4.1.0
-        env:
-          version: ${{steps.sing-box.outputs.version}}
-        with:
-          name: SFA-PuerNya-${{env.version}}-arm64-v8a
-          path: sfa/app/build/outputs/apk/**/*arm64-v8a*.apk
-          compression-level: 9
-
-      - name: Upload armeabi-v7a apk
-        uses: actions/upload-artifact@v4.1.0
-        env:
-          version: ${{steps.sing-box.outputs.version}}
-        with:
-          name: SFA-PuerNya-${{env.version}}-armeabi-v7a
-          path: sfa/app/build/outputs/apk/**/*armeabi-v7a*.apk
-          compression-level: 9
-
-      - name: Upload x86_64 apk
-        uses: actions/upload-artifact@v4.1.0
-        env:
-          version: ${{steps.sing-box.outputs.version}}
-        with:
-          name: SFA-PuerNya-${{env.version}}-x86_64
-          path: sfa/app/build/outputs/apk/**/*x86_64*.apk
-          compression-level: 9
-
-      - name: Upload x86 apk
-        uses: actions/upload-artifact@v4.1.0
-        env:
-          version: ${{steps.sing-box.outputs.version}}
-        with:
-          name: SFA-PuerNya-${{env.version}}-x86
-          path: sfa/app/build/outputs/apk/**/*x86*.apk
-          compression-level: 9
-
-      - name: Upload universal apk
-        uses: actions/upload-artifact@v4.1.0
-        env:
-          version: ${{steps.sing-box.outputs.version}}
-        with:
-          name: SFA-PuerNya-${{env.version}}-universal
-          path: sfa/app/build/outputs/apk/**/*universal*.apk
-          compression-level: 9
-          
-      - name: 创建发布标签
-        run: |
-         echo "RELEASE_TAG=v${{steps.sing-box.outputs.version}}" >> $GITHUB_ENV
-
-      - name: 创建发布
-        uses: softprops/action-gh-release@v1
-        env:
-         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-         tag_name: ${{ env.RELEASE_TAG }}
-         name: Release ${{ env.RELEASE_TAG }}
-         body: ${{ steps.get_commit_message.outputs.commit_message }}
-         draft: false
-         prerelease: false
-         files: |
-          sfa/app/build/outputs/apk/other/release/*.apk
+          gh release create v${VERSION} --title "Release v${VERSION}" --notes "Automated release of version ${VERSION}" \
+            sfa/app/build/outputs/apk/other/release/*.apk
