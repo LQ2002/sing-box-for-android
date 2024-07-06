@@ -35,8 +35,7 @@ jobs:
         uses: actions/setup-java@v4.0.0
         with:
          distribution: 'temurin'
-         java-version: '17'
-         cache: 'gradle'
+         java-version: '21'
 
       - name: Setup ndk
         uses: nttld/setup-ndk@v1
