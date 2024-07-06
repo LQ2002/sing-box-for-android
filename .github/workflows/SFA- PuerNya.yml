@@ -39,11 +39,17 @@ jobs:
           cd sing-box
           echo "commit_id=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
-      - name: Setup java
-        uses: actions/setup-java@v4.0.0
+      - name: Setup Java
+        uses: actions/setup-java@v3
         with:
-          distribution: 'oracle'
-          java-version: 21
+         distribution: 'temurin'  # 使用 Eclipse Temurin (AdoptOpenJDK)
+         java-version: '21'  # 指定具体版本
+         cache: 'gradle'  # 缓存 Gradle 依赖
+
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+        with:
+         gradle-version: wrapper
 
       - name: Setup ndk
         uses: nttld/setup-ndk@v1
