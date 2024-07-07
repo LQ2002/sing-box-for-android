@@ -15,15 +15,10 @@ jobs:
           ref: building
           fetch-depth: 0
           
-      - name: Get latest go version
-        id: go
-        run: |
-          echo version=$(curl -s https://raw.githubusercontent.com/actions/go-versions/update-versions-manifest-file/versions-manifest.json | grep -oE '"version": "[0-9]{1}.[0-9]{1,}(.[0-9]{1,})?"' | head -1 | cut -d':' -f2 | sed 's/ //g; s/"//g') >> $GITHUB_OUTPUT
-
-      - name: Setup go
+      - name: Setup latest stable Go
         uses: actions/setup-go@v5.0.0
         with:
-          go-version: ${{steps.go.outputs.version}}
+         go-version: 'stable'
 
       - uses: actions/cache@v3
         with:
