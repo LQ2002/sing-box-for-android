@@ -31,7 +31,7 @@ jobs:
           cd sing-box
           echo "commit_message=$(git log -1 --pretty=%B)" >> $GITHUB_OUTPUT
 
-      - name: Setup Java and Android SDK
+      - name: Setup Java
         uses: actions/setup-java@v4.0.0
         with:
          distribution: 'temurin'
