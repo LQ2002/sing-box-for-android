@@ -25,6 +25,15 @@ jobs:
         with:
           go-version: ${{steps.go.outputs.version}}
 
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('sing-box/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
       - name: Get latest commit message
         id: get_commit_message
         run: |
@@ -42,6 +51,7 @@ jobs:
         id: setup-ndk
         with:
           ndk-version: r26b
+          add-to-path: false
 
       - name: Get latest build tools version
         id: sdk
@@ -62,11 +72,12 @@ jobs:
           TAGS: with_quic,with_dhcp,with_wireguard,with_shadowsocksr,with_ech,with_utls,with_clash_api,with_gvisor
           VERSION: ${{steps.sing-box.outputs.version}}
           CGO_ENABLED: '0'
+          GOMAXPROCS: 4
         run: |
           cd sing-box
           go mod tidy
           make lib_install
-          gomobile bind -v -a -trimpath -androidapi 21 -javapkg=io.nekohasekai -libname=box -tags ${TAGS} -ldflags "-X github.com/sagernet/sing-box/constant.Version=${VERSION} -s -w -buildid=" ./experimental/libbox
+          gomobile bind -v -a -trimpath -androidapi 21 -javapkg=io.nekohasekai -libname=box -tags ${TAGS} -ldflags "-X github.com/sagernet/sing-box/constant.Version=${VERSION} -s -w -buildid=" -gcflags=all="-l -B" ./experimental/libbox
 
       - name: Checkout app repository
         uses: actions/checkout@v4.1.1
