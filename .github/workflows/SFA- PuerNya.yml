@@ -14,11 +14,6 @@ jobs:
           repository: PuerNya/sing-box
           ref: building
           fetch-depth: 0
-          
-      - name: Setup latest stable Go
-        uses: actions/setup-go@v5.0.0
-        with:
-         go-version: 'stable'
 
       - uses: actions/cache@v3
         with:
@@ -28,7 +23,12 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('sing-box/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-
+      
+      - name: Setup latest stable Go
+        uses: actions/setup-go@v5.0.0
+        with:
+         go-version: 'stable'
+         
       - name: Get latest commit message
         id: get_commit_message
         run: |
@@ -81,10 +81,10 @@ jobs:
           repository: LQ2002/sing-box-for-android
           submodules: recursive
 
-      - name: Setup Android SDK
+      - name: Setup Android SDK and Gradle/caches
         uses: android-actions/setup-android@v3
         with:
-         components: 'build-tools-30.0.3,android-30'
+         cmdline-tools-version: 'latest'
 
       - uses: actions/cache@v3
         with:
@@ -97,9 +97,11 @@ jobs:
 
       - name: Install Build Tools
         run: |
-          sdkmanager --install "build-tools;30.0.3"
-          echo "$ANDROID_HOME/build-tools/30.0.3" >> $GITHUB_PATH
-
+          run: |
+           BUILD_TOOLS_VERSION=$(sdkmanager --list | grep "build-tools;" | sort -r | head -n 1 | awk '{print \$1}')
+           PLATFORM_VERSION=$(sdkmanager --list | grep "platforms;android-" | sort -r | head -n 1 | awk '{print \$1}')
+           sdkmanager --install "${BUILD_TOOLS_VERSION}" "${PLATFORM_VERSION}" "platform-tools"
+     
       - name: Debug Keystore
         run: |
           ls -l sfa/app/
