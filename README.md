@@ -30,3 +30,5 @@ with this application without prior consent.
 
 Under the license, that forks of the app are not allowed to be listed on F-Droid or other app stores
 under the original name.
+
+[ DevDengChao](https://github.com/DevDengChao/sing-box-for-android/tree/fix/multiple-error-dialog-when-scan-invalid-qr-code)
