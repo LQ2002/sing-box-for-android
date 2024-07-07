@@ -97,8 +97,8 @@ jobs:
 
       - name: Install latest necessary SDK components
         run: |
-         BUILD_TOOLS_VERSION=$(sdkmanager --list | grep "build-tools;" | sort -rV | head -n 1 | awk '{print \$1}')
-         PLATFORM_VERSION=$(sdkmanager --list | grep "platforms;android-" | sort -rV | head -n 1 | awk '{print \$1}')
+         BUILD_TOOLS_VERSION=$(sdkmanager --list | grep "build-tools;" | sort -rV | head -n 1 | awk '{print $1}')
+         PLATFORM_VERSION=$(sdkmanager --list | grep "platforms;android-" | sort -rV | head -n 1 | awk '{print $1}')
          sdkmanager --install "${BUILD_TOOLS_VERSION}" "${PLATFORM_VERSION}" "platform-tools"
         shell: bash
 
