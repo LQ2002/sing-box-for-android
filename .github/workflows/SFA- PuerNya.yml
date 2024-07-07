@@ -83,6 +83,17 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+        with:
+         components: 'build-tools-30.0.3,android-30'
+
+      - uses: actions/cache@v3
+        with:
+         path: |
+           ~/.gradle/caches
+           ~/.gradle/wrapper
+         key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+         restore-keys: |
+           ${{ runner.os }}-gradle-
 
       - name: Install Build Tools
         run: |
@@ -114,15 +125,19 @@ jobs:
           echo "VERSION_NAME=${VERSION}" > local.properties
           echo "VERSION_CODE=$(date +%Y%m%d%H)" >> local.properties
           chmod +x ./gradlew
-          ./gradlew assembleRelease \
-            -Pandroid.injected.signing.store.file=$PWD/app/release.keystore \
-            -Pandroid.injected.signing.store.password=$KEYSTORE_PASSWORD \
-            -Pandroid.injected.signing.key.alias=$KEY_ALIAS \
-            -Pandroid.injected.signing.key.password=$KEY_PASSWORD \
-            -Pandroid.injected.signing.v1-signing-enabled=true \
-            -Pandroid.injected.signing.v2-signing-enabled=true \
-            -Pandroid.injected.signing.v3-signing-enabled=true \
-            -Pandroid.injected.signing.v4-signing-enabled=true
+          ./gradlew assembleRelease --parallel --daemon --max-workers=4 \
+          -Dorg.gradle.caching=true \
+          -Dorg.gradle.configureondemand=true \
+          -Dkotlin.incremental=false \
+          -Dkotlin.compiler.execution.strategy=in-process \
+          -Pandroid.injected.signing.store.file=$PWD/app/release.keystore \
+          -Pandroid.injected.signing.store.password=$KEYSTORE_PASSWORD \
+          -Pandroid.injected.signing.key.alias=$KEY_ALIAS \
+          -Pandroid.injected.signing.key.password=$KEY_PASSWORD \
+          -Pandroid.injected.signing.v1-signing-enabled=true \
+          -Pandroid.injected.signing.v2-signing-enabled=true \
+          -Pandroid.injected.signing.v3-signing-enabled=true \
+          -Pandroid.injected.signing.v4-signing-enabled=true
 
       - name: List build output directory
         run: |
