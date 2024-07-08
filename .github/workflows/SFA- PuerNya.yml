@@ -148,13 +148,15 @@ jobs:
 
       - name: Verify APK signatures
         run: |
+         APKSIGNER="$ANDROID_HOME/build-tools/$(ls $ANDROID_HOME/build-tools | sort -V | tail -n 1)/apksigner"
          for apk in sfa/app/build/outputs/apk/other/release/*.apk; do
-         apksigner verify --verbose "$apk"
+         "$APKSIGNER" verify --verbose "$apk"
          done
-
+         
          for apk in sfa/app/build/outputs/apk/play/release/*.apk; do
-         apksigner verify --verbose "$apk"
+         "$APKSIGNER" verify --verbose "$apk"
          done
+        shell: bash
 
       - name: Upload APKs
         uses: actions/upload-artifact@v4.1.0
