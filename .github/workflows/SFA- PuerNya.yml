@@ -15,7 +15,7 @@ jobs:
           ref: building
           fetch-depth: 0
 
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         with:
           path: |
             ~/go/pkg/mod
@@ -86,7 +86,7 @@ jobs:
         with:
          cmdline-tools-version: 'latest'
 
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         with:
          path: |
            ~/.gradle/caches
@@ -172,7 +172,7 @@ jobs:
           echo "RELEASE_TAG=v${{steps.sing-box.outputs.version}}" >> $GITHUB_ENV
      
       - name: 创建发布
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         env:
          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
