@@ -244,7 +244,12 @@ class VPNScanActivity : AbstractActivity<ActivityVpnScanBinding>() {
         } catch (ignored: Exception) {
             return null
         }
-        return VPNCoreType(vpnType.coreType, vpnType.corePath, vpnType.goVersion)
+        return if (vpnType.coreType.equals("Unknown", ignoreCase = true)) {
+        VPNCoreType(null, vpnType.corePath, vpnType.goVersion)
+        } 
+            else {
+        VPNCoreType(vpnType.coreType, vpnType.corePath, vpnType.goVersion)
+        }
     }
 
 }
