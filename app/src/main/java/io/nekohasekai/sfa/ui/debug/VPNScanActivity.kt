@@ -48,7 +48,7 @@ class VPNScanActivity : AbstractActivity<ActivityVpnScanBinding>() {
     )
 
     class VPNCoreType(
-        val coreType: String,
+        val coreType: String?,
         val corePath: String,
         val goVersion: String
     )
