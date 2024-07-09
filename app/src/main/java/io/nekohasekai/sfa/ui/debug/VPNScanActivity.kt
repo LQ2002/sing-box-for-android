@@ -89,10 +89,10 @@ class VPNScanActivity : AbstractActivity<ActivityVpnScanBinding>() {
                 binding.appTypeText.setText(R.string.vpn_app_type_other)
             }
             val coreType = element.vpnType.coreType?.coreType
-            if (coreType != null) {
-                binding.coreTypeText.text = element.vpnType.coreType.coreType
-            } else {
+            if (coreType == null) {
                 binding.coreTypeText.setText(R.string.vpn_core_type_unknown)
+            } else {
+                binding.coreTypeText.text = coreType
             }
             val corePath = element.vpnType.coreType?.corePath.takeIf { !it.isNullOrBlank() }
             if (corePath != null) {
@@ -246,8 +246,7 @@ class VPNScanActivity : AbstractActivity<ActivityVpnScanBinding>() {
         }
         return if (vpnType.coreType.equals("Unknown", ignoreCase = true)) {
         VPNCoreType(null, vpnType.corePath, vpnType.goVersion)
-        } 
-            else {
+        } else {
         VPNCoreType(vpnType.coreType, vpnType.corePath, vpnType.goVersion)
         }
     }
