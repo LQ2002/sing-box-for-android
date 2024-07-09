@@ -63,7 +63,7 @@
     <string name="loading">加载中…</string>
     <string name="service_error_missing_permission">请求 VPN 权限失败</string>
     <string name="service_error_missing_notification_permission">请求 通知 权限失败</string>
-    <string name="service_error_empty_configuration">空配置</string>
+    <string name="service_error_empty_configuration">配置为空</string>
     <string name="service_error_title_start_command_server">启动命令服务器</string>
     <string name="service_error_title_create_service">创建服务</string>
     <string name="service_error_title_start_service">启动服务</string>
