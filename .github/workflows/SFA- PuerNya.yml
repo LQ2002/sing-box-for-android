@@ -72,7 +72,7 @@ jobs:
           cd sing-box
           go mod tidy
           make lib_install
-          gomobile bind -v -a -trimpath -androidapi 22 -javapkg=io.nekohasekai -libname=box -tags ${TAGS} -ldflags "-X github.com/sagernet/sing-box/constant.Version=${VERSION} -s -w -buildid=" -gcflags=all="-l -B" ./experimental/libbox
+          gomobile bind -v -a -trimpath -androidapi 21 -javapkg=io.nekohasekai -libname=box -tags ${TAGS} -ldflags "-X github.com/sagernet/sing-box/constant.Version=${VERSION} -s -w -buildid=" -gcflags=all="-l -B" ./experimental/libbox
 
       - name: Checkout app repository
         uses: actions/checkout@v4.1.1
