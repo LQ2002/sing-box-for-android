@@ -3,7 +3,6 @@ name: Build SFA PuerNya
 on:
   workflow_dispatch:  # 只保留手动触发选项
   schedule:
-    # 每天早6点和晚20点运行（UTC时间）
       - cron: '0 6,20 * * *'
 
 jobs:
