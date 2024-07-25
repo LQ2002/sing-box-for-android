@@ -169,19 +169,19 @@ jobs:
           path: sfa/app/build/outputs/apk/**/*.apk
           compression-level: 9
           
-      - name: 创建发布标签
-        run: |
-          echo "RELEASE_TAG=v${{steps.sing-box.outputs.version}}" >> $GITHUB_ENV
+      #- name: 创建发布标签
+        #run: |
+          #echo "RELEASE_TAG=v${{steps.sing-box.outputs.version}}" >> $GITHUB_ENV
      
-      - name: 创建发布
-        uses: softprops/action-gh-release@v2
-        env:
-         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-         tag_name: ${{ env.RELEASE_TAG }}
-         name: Release ${{ env.RELEASE_TAG }}
-         body: ${{ steps.get_commit_message.outputs.commit_message }}
-         draft: false
-         prerelease: false
-         files: |
-           sfa/app/build/outputs/apk/other/release/*.apk
+      #- name: 创建发布
+        #uses: softprops/action-gh-release@v2
+        #env:
+         #GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        #with:
+         #tag_name: ${{ env.RELEASE_TAG }}
+         #name: Release ${{ env.RELEASE_TAG }}
+         #body: ${{ steps.get_commit_message.outputs.commit_message }}
+         #draft: false
+         #prerelease: false
+         #files: |
+           #sfa/app/build/outputs/apk/other/release/*.apk
