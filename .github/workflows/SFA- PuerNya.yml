@@ -2,8 +2,8 @@ name: Build SFA PuerNya
 
 on:
   workflow_dispatch:  # 只保留手动触发选项
-  schedule:
-      - cron: '0 22,12 * * *'
+  #schedule:
+      #- cron: '0 22,12 * * *'
 
 jobs:
   build:
