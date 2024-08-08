@@ -118,7 +118,7 @@ jobs:
 
           path: sfa
 
-          repository: LQ2002/sing-box-for-android
+          repository: SagerNet/sing-box-for-android
 
           submodules: recursive
 
