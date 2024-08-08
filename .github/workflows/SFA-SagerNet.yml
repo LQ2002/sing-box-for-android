@@ -50,15 +50,11 @@ jobs:
 
 
 
-      - name: Setup java
-
+      - name: Setup Java
         uses: actions/setup-java@v4.0.0
-
         with:
-
-          distribution: 'oracle'
-
-          java-version: 21
+         distribution: 'temurin'
+         java-version: '22'
 
 
 
