@@ -82,6 +82,7 @@ jobs:
         with:
           path: sfa
           repository: LQ2002/sing-box-for-android
+          ref: 1.10-ZH
           submodules: recursive
 
       - name: Setup Android SDK and Gradle/caches
