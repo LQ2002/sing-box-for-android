@@ -1,15 +1,7 @@
 package io.nekohasekai.sfa.utils
 
 import go.Seq
-import io.nekohasekai.libbox.CommandClient
-import io.nekohasekai.libbox.CommandClientHandler
-import io.nekohasekai.libbox.CommandClientOptions
-import io.nekohasekai.libbox.Libbox
-import io.nekohasekai.libbox.OutboundGroup
-import io.nekohasekai.libbox.OutboundGroupIterator
-import io.nekohasekai.libbox.StatusMessage
-import io.nekohasekai.libbox.StringIterator
-import io.nekohasekai.sfa.ktx.toList
+import io.nekohasekai.libbox.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -23,25 +15,16 @@ open class CommandClient(
 ) {
 
     enum class ConnectionType {
-        Status, Groups, Log, ClashMode
+        Status, Groups, Log, ClashMode, Connections
     }
 
-    interface Handler {
-
-        fun onConnected() {}
-        fun onDisconnected() {}
-        fun updateStatus(status: StatusMessage) {}
-        fun updateGroups(newGroups: MutableList<OutboundGroup>) {}
-        fun clearLog() {}
-        fun appendLog(message: String) {}
-        fun initializeClashMode(modeList: List<String>, currentMode: String) {}
-        fun updateClashMode(newMode: String) {}
-
+    interface Handler : CommandClientHandler {
+        // This interface now directly extends CommandClientHandler
     }
-
 
     private var commandClient: CommandClient? = null
     private val clientHandler = ClientHandler()
+
     fun connect() {
         disconnect()
         val options = CommandClientOptions()
@@ -50,6 +33,7 @@ open class CommandClient(
             ConnectionType.Groups -> Libbox.CommandGroup
             ConnectionType.Log -> Libbox.CommandLog
             ConnectionType.ClashMode -> Libbox.CommandClashMode
+            ConnectionType.Connections -> Libbox.CommandConnections
         }
         options.statusInterval = 2 * 1000 * 1000 * 1000
         val commandClient = CommandClient(clientHandler, options)
@@ -87,52 +71,40 @@ open class CommandClient(
     }
 
     private inner class ClientHandler : CommandClientHandler {
-
         override fun connected() {
-            handler.onConnected()
+            handler.connected()
         }
 
-        override fun disconnected(message: String?) {
-            handler.onDisconnected()
+        override fun disconnected(message: String) {
+            handler.disconnected(message)
         }
 
-        override fun writeGroups(message: OutboundGroupIterator?) {
-            if (message == null) {
-                return
-            }
-            val groups = mutableListOf<OutboundGroup>()
-            while (message.hasNext()) {
-                groups.add(message.next())
-            }
-            handler.updateGroups(groups)
+        override fun clearLogs() {
+            handler.clearLogs()
         }
 
-        override fun clearLog() {
-            handler.clearLog()
+        override fun writeLogs(messageList: StringIterator) {
+            handler.writeLogs(messageList)
         }
 
-        override fun writeLog(message: String?) {
-            if (message == null) {
-                return
-            }
-            handler.appendLog(message)
+        override fun writeStatus(message: StatusMessage) {
+            handler.writeStatus(message)
         }
 
-        override fun writeStatus(message: StatusMessage?) {
-            if (message == null) {
-                return
-            }
-            handler.updateStatus(message)
+        override fun writeGroups(message: OutboundGroupIterator) {
+            handler.writeGroups(message)
         }
 
         override fun initializeClashMode(modeList: StringIterator, currentMode: String) {
-            handler.initializeClashMode(modeList.toList(), currentMode)
+            handler.initializeClashMode(modeList, currentMode)
         }
 
         override fun updateClashMode(newMode: String) {
             handler.updateClashMode(newMode)
         }
 
+        override fun writeConnections(message: Connections) {
+            handler.writeConnections(message)
+        }
     }
-
 }
