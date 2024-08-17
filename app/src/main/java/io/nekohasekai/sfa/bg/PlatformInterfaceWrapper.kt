@@ -4,19 +4,11 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Process
 import androidx.annotation.RequiresApi
-import io.nekohasekai.libbox.InterfaceUpdateListener
-import io.nekohasekai.libbox.NetworkInterfaceIterator
-import io.nekohasekai.libbox.PlatformInterface
-import io.nekohasekai.libbox.StringIterator
-import io.nekohasekai.libbox.TunOptions
-import io.nekohasekai.libbox.WIFIState
+import io.nekohasekai.libbox.*
 import io.nekohasekai.sfa.Application
 import java.net.Inet6Address
 import java.net.InetSocketAddress
-import java.net.InterfaceAddress
 import java.net.NetworkInterface
-import java.util.Enumeration
-import io.nekohasekai.libbox.NetworkInterface as LibboxNetworkInterface
 
 interface PlatformInterfaceWrapper : PlatformInterface {
 
@@ -134,7 +126,6 @@ interface PlatformInterfaceWrapper : PlatformInterface {
                 addresses =
                     StringArray(
                         element.interfaceAddresses.mapTo(mutableListOf()) { it.toPrefix() }
-                            .iterator()
                     )
             }
         }
@@ -148,15 +139,19 @@ interface PlatformInterfaceWrapper : PlatformInterface {
         }
     }
 
-    private class StringArray(private val iterator: Iterator<String>) : StringIterator {
+    private class StringArray(private val list: List<String>) : StringIterator {
+        private var index = 0
 
         override fun hasNext(): Boolean {
-            return iterator.hasNext()
+            return index < list.size
         }
 
         override fun next(): String {
-            return iterator.next()
+            return list[index++]
+        }
+
+        override fun Len(): Int {
+            return list.size
         }
     }
-
 }
