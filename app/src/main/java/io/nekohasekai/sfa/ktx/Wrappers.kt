@@ -8,21 +8,26 @@ import io.nekohasekai.libbox.StringIterator
 import java.net.InetAddress
 
 fun Iterable<String>.toStringIterator(): StringIterator {
+    val list = this.toList()
     return object : StringIterator {
-        val iterator = iterator()
+        private var index = 0
 
         override fun hasNext(): Boolean {
-            return iterator.hasNext()
+            return index < list.size
         }
 
         override fun next(): String {
-            return iterator.next()
+            return list[index++]
+        }
+
+        override fun Len(): Int {
+            return list.size
         }
     }
 }
 
 fun StringIterator.toList(): List<String> {
-    return mutableListOf<String>().apply {
+    return buildList {
         while (hasNext()) {
             add(next())
         }
