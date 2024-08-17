@@ -54,11 +54,10 @@ jobs:
         id: sdk
         run: echo version=$(ls $ANDROID_HOME/build-tools | tail -n 1) >> $GITHUB_OUTPUT
 
-      - name: Get sing-box version
+      - name: get sing-box version
         id: sing-box
         run: |
-          cd sing-box
-          git remote add sekai https://github.com/SagerNet/sing-box
+          git remote add sekai https://github.com/SagerNet/sing-box.git
           git fetch --tags sekai
           version=$(CGO_ENABLED=0 go run ./cmd/internal/read_tag)
           echo version=$version >> $GITHUB_OUTPUT
